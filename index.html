@@ -32,6 +32,28 @@
   }
   .count { margin-left: auto; font-size: 12px; color: #aaa; }
 
+  /* Batch buttons */
+  .batch-bar {
+    display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; align-items: center;
+  }
+  .batch-bar .label { font-size: 12px; color: #888; margin-right: 4px; }
+  .batch-btn {
+    padding: 5px 11px; border-radius: 6px; border: 1px solid #ddd;
+    background: #fff; font-size: 12px; font-weight: 500; color: #333;
+    cursor: pointer; transition: background 0.1s, border-color 0.1s;
+  }
+  .batch-btn:hover { background: #f0f0f0; border-color: #bbb; }
+  .batch-btn.has-urls { border-color: #0a66c2; color: #0a66c2; }
+  .batch-btn.has-urls:hover { background: #e8f0fe; }
+
+  /* Batch divider row */
+  tr.batch-divider td {
+    background: #f5f5f3; font-size: 11px; font-weight: 600; color: #999;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 5px 14px; border-top: 2px solid #e4e4e0;
+    border-bottom: 1px solid #e4e4e0;
+  }
+
   .table-wrap {
     overflow-x: auto; border-radius: 10px;
     border: 1px solid #e4e4e0; background: #fff;
@@ -118,6 +140,10 @@
     <option value="N/A">No URL</option>
   </select>
   <span class="count" id="cnt"></span>
+</div>
+
+<div class="batch-bar" id="batchBar">
+  <span class="label">Open LI batch:</span>
 </div>
 
 <div class="table-wrap">
@@ -279,20 +305,47 @@ function render() {
     });
   }
 
-  document.getElementById('tbody').innerHTML = rows.map(r => {
+  const BATCH = 10;
+  let html = '';
+  rows.forEach((r, i) => {
     const [, name, evts, url, status, type] = r;
+    // Insert batch divider at start of each group of 10
+    if (i % BATCH === 0) {
+      const batchNum = Math.floor(i / BATCH) + 1;
+      const end = Math.min(i + BATCH, rows.length);
+      html += `<tr class="batch-divider"><td colspan="5">Batch ${batchNum} &nbsp;·&nbsp; rows ${i+1}–${end}</td></tr>`;
+    }
     const liHtml = url
       ? `<a class="li-icon-link" href="${url.startsWith('http')?url:'https://'+url}" target="_blank" rel="noopener" title="${name} on LinkedIn">${liIcon}</a>`
       : `<span class="no-link-icon">${liIcon}</span>`;
-    return `<tr>
+    html += `<tr>
       <td class="li-cell">${liHtml}</td>
       <td class="name">${name}</td>
       <td>${evtLabel(evts)}</td>
       <td><span class="sp ${statusClass(status)}">${statusLabel(status)}</span></td>
       <td><span class="tp ${typeClass(type)}">${type}</span></td>
     </tr>`;
-  }).join('');
+  });
+  document.getElementById('tbody').innerHTML = html;
   document.getElementById('cnt').textContent = `${rows.length} of ${DATA.length}`;
+
+  // Rebuild batch buttons
+  const bar = document.getElementById('batchBar');
+  bar.innerHTML = '<span class="label">Open LI batch:</span>';
+  const totalBatches = Math.ceil(rows.length / BATCH);
+  for (let b = 0; b < totalBatches; b++) {
+    const slice = rows.slice(b * BATCH, (b + 1) * BATCH);
+    const urls = slice.map(r => r[3]).filter(u => u && u.trim() !== '');
+    const btn = document.createElement('button');
+    btn.className = 'batch-btn' + (urls.length > 0 ? ' has-urls' : '');
+    btn.textContent = `Batch ${b+1} (${urls.length} LI)`;
+    btn.title = urls.length ? `Open ${urls.length} LinkedIn profiles` : 'No LinkedIn URLs in this batch';
+    btn.disabled = urls.length === 0;
+    btn.onclick = () => {
+      urls.forEach(u => window.open(u.startsWith('http') ? u : 'https://' + u, '_blank'));
+    };
+    bar.appendChild(btn);
+  }
 }
 
 render();
