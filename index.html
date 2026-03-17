@@ -298,10 +298,21 @@ function render() {
     return true;
   });
 
+  // Default sort: event group → type → status (Confirmed first)
+  const evtOrder = r => r[2].includes(';') ? 0 : r[2].includes('Mini-FRAME') ? 1 : 2;
+  const typeOrder = ['VC','LP','Impact Investor','Investor','Policy/NGO','Academic/Research','Consultant/Advisor','Unknown'];
+  const stOrder = r => r[4]==='Confirmed'?0:r[4]==='Guessed'?1:2;
+
   if (sortCol >= 0) {
     rows = [...rows].sort((a,b) => {
       const av=a[sortCol]||'', bv=b[sortCol]||'';
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  } else {
+    rows = [...rows].sort((a,b) => {
+      const ed = evtOrder(a) - evtOrder(b); if (ed) return ed;
+      const td = typeOrder.indexOf(a[5]) - typeOrder.indexOf(b[5]); if (td) return td;
+      return stOrder(a) - stOrder(b);
     });
   }
 
