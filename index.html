@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reframe Venture Attendees</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f7f7f5;
+    color: #1a1a1a;
+    padding: 36px 24px;
+    min-height: 100vh;
+  }
+  .header { margin-bottom: 28px; }
+  .header h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; }
+  .header p { font-size: 13px; color: #888; margin-top: 5px; }
+
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 16px;
+  }
+  .controls input[type="text"] {
+    padding: 7px 12px; border: 1px solid #ddd; border-radius: 7px;
+    font-size: 13px; width: 210px; outline: none; background: #fff;
+  }
+  .controls input[type="text"]:focus { border-color: #aaa; }
+  .controls select {
+    padding: 7px 10px; border: 1px solid #ddd; border-radius: 7px;
+    font-size: 13px; background: #fff; cursor: pointer; outline: none;
+  }
+  .count { margin-left: auto; font-size: 12px; color: #aaa; }
+
+  .table-wrap {
+    overflow-x: auto; border-radius: 10px;
+    border: 1px solid #e4e4e0; background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #fafaf8; font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #888;
+    padding: 10px 14px; text-align: left; border-bottom: 1px solid #e4e4e0;
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: #333; }
+  thead th .si { margin-left: 3px; opacity: 0.35; font-size: 10px; }
+  thead th.sorted .si { opacity: 1; }
+  tbody tr { border-bottom: 1px solid #f2f2f0; transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #fafaf8; }
+  td { padding: 9px 14px; vertical-align: middle; }
+
+  /* Avatar */
+  .avatar-cell { width: 44px; padding-right: 6px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    object-fit: cover; display: block;
+    background: #e8e8e8;
+    border: 1.5px solid #ebebeb;
+  }
+  .avatar-initials {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.2);
+  }
+
+  /* Event badge */
+  .ev { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:500; white-space:nowrap; }
+  .ev-mini   { background:#e8f0fe; color:#1a56c9; }
+  .ev-novata { background:#fef3e2; color:#b45309; }
+  .ev-both   { background:#f0fdf4; color:#166534; }
+
+  /* Name */
+  .name { font-weight: 500; }
+
+  /* LinkedIn */
+  .li-link { display:inline-flex; align-items:center; gap:4px; color:#0a66c2; text-decoration:none; font-size:12px; }
+  .li-link:hover { text-decoration:underline; }
+  .no-link { color:#ccc; font-size:12px; }
+
+  /* Status */
+  .sp { display:inline-block; padding:2px 7px; border-radius:20px; font-size:11px; font-weight:500; }
+  .sp-confirmed { background:#dcfce7; color:#15803d; }
+  .sp-guessed   { background:#fef9c3; color:#854d0e; }
+  .sp-na        { background:#f1f5f9; color:#94a3b8; }
+
+  /* Type */
+  .tp { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:500; white-space:nowrap; }
+  .tp-vc         { background:#ede9fe; color:#5b21b6; }
+  .tp-lp         { background:#dbeafe; color:#1e40af; }
+  .tp-impact     { background:#d1fae5; color:#065f46; }
+  .tp-investor   { background:#e0f2fe; color:#0369a1; }
+  .tp-policy     { background:#fce7f3; color:#9d174d; }
+  .tp-academic   { background:#fef3c7; color:#92400e; }
+  .tp-consultant { background:#f3f4f6; color:#374151; }
+  .tp-unknown    { background:#f8fafc; color:#94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Reframe Venture Attendees</h1>
+  <p>Mini-FRAME NYC (Mar 17) &amp; Novata Dinner (Mar 18, 2026) &nbsp;·&nbsp; LinkedIn status: <strong>Confirmed</strong> = from Luma profile · <strong>Guessed</strong> = web search</p>
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search name…" oninput="render()">
+  <select id="evtF" onchange="render()">
+    <option value="">All events</option>
+    <option value="both">Both events</option>
+    <option value="Mini-FRAME">Mini-FRAME NYC only</option>
+    <option value="Novata">Novata Dinner only</option>
+  </select>
+  <select id="typF" onchange="render()">
+    <option value="">All types</option>
+    <option value="VC">VC</option>
+    <option value="LP">LP</option>
+    <option value="Impact Investor">Impact Investor</option>
+    <option value="Investor">Investor</option>
+    <option value="Policy/NGO">Policy/NGO</option>
+    <option value="Academic/Research">Academic/Research</option>
+    <option value="Consultant/Advisor">Consultant/Advisor</option>
+    <option value="Unknown">Unknown</option>
+  </select>
+  <select id="stF" onchange="render()">
+    <option value="">All statuses</option>
+    <option value="Confirmed">Confirmed</option>
+    <option value="Guessed">Guessed</option>
+    <option value="N/A">No URL</option>
+  </select>
+  <span class="count" id="cnt"></span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="avatar-cell"></th>
+        <th onclick="sort(1)">Name <span class="si">↕</span></th>
+        <th onclick="sort(2)">Event <span class="si">↕</span></th>
+        <th>LinkedIn</th>
+        <th onclick="sort(4)">Status <span class="si">↕</span></th>
+        <th onclick="sort(5)">Type <span class="si">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+// [photo_url, name, events_csv, linkedin_url, status, type]
+const DATA = [
+  ["https://images.lumacdn.com/avatars/ec/2cf8d1df-b251-4585-955b-2ef301039ea4.png","Reframe Venture","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/benedict-jones-7098aa182","Confirmed","VC"],
+  [null,"Dr Johannes Lenhard","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/johannes-lenhard-b2904577","Confirmed","VC"],
+  ["https://images.lumacdn.com/avatars/px/c37094d2-b35c-4304-a063-7dcf4964aa4e","Sonam Velani","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/sonamvelani","Confirmed","VC"],
+  [null,"Abigail Archibald","Mini-FRAME NYC","https://linkedin.com/in/abigail-kahn-archibald-775408/","Guessed","LP"],
+  [null,"Adam Robbins","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/adambrobbins","Guessed","VC"],
+  [null,"Aditya Vikram","Mini-FRAME NYC","https://linkedin.com/in/aditya30v/","Guessed","Impact Investor"],
+  [null,"Afrooz Kaviani","Mini-FRAME NYC","https://linkedin.com/in/afroozkj/","Guessed","Policy/NGO"],
+  [null,"Alan Mattamana","Mini-FRAME NYC","https://linkedin.com/in/alanmattamana","Confirmed","LP"],
+  ["https://images.lumacdn.com/avatars/3f/3dbb916b-38a1-46c6-b3ea-b2e3a6959b0b.png","Alexander Piskunov","Mini-FRAME NYC","https://linkedin.com/in/alexander-piskunov","Confirmed","VC"],
+  [null,"Alexandra Crerend","Mini-FRAME NYC","https://linkedin.com/in/alexandra-crerend/","Guessed","VC"],
+  [null,"Amy Ho","Mini-FRAME NYC","https://linkedin.com/in/amyhocpwacfp","Confirmed","Consultant/Advisor"],
+  [null,"Anita Dorett","Mini-FRAME NYC","https://linkedin.com/in/anitadorett/","Guessed","Policy/NGO"],
+  [null,"Antonio Rodriguez","Mini-FRAME NYC","https://linkedin.com/in/antonio-rodriguez-cfa-cipm-11985327","Confirmed","Investor"],
+  [null,"Ashton Rosin","Mini-FRAME NYC","https://linkedin.com/in/ashtonrosin","Confirmed","Consultant/Advisor"],
+  [null,"Audrey Mocle","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/audrey-mocle-04928842/","Guessed","Policy/NGO"],
+  [null,"Ayako Kageyama","Novata Dinner","https://linkedin.com/in/ayako-kageyama-94545b33/","Guessed","Impact Investor"],
+  [null,"Camille Doherty","Mini-FRAME NYC","https://linkedin.com/in/camille-doherty","Confirmed","Consultant/Advisor"],
+  [null,"Carolina Echecopar","Mini-FRAME NYC","https://linkedin.com/in/carolina-echecopar-29a556196","Confirmed","Impact Investor"],
+  [null,"Caroline Kassie","Mini-FRAME NYC","https://linkedin.com/in/caroline-kassie-22203537","Confirmed","VC"],
+  [null,"Caroline Noble","Mini-FRAME NYC","https://linkedin.com/in/caroline-noble-398ba7132","Confirmed","Impact Investor"],
+  [null,"Chris Jurgens","Mini-FRAME NYC","https://linkedin.com/in/chris-jurgens-76152/","Guessed","Impact Investor"],
+  [null,"Chris Millisits","Mini-FRAME NYC","https://linkedin.com/in/chris-millisits","Confirmed","VC"],
+  [null,"Cornelia Gomez","Mini-FRAME NYC","https://linkedin.com/in/cornelia-gomez/","Guessed","Impact Investor"],
+  ["https://images.lumacdn.com/avatars/cp/f7feafbe-c4b0-4200-89dd-c72d0fa6c211","Dan Firger","Mini-FRAME NYC","https://linkedin.com/in/danfirger","Confirmed","Impact Investor"],
+  [null,"David Curran","Mini-FRAME NYC","https://linkedin.com/in/currandg/","Guessed","VC"],
+  [null,"David Mathewson","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/david-mathewson-11a7604","Confirmed","Impact Investor"],
+  [null,"David Vasquez","Mini-FRAME NYC","","N/A","Unknown"],
+  [null,"Dawn Powell","Mini-FRAME NYC","https://linkedin.com/in/dawnepowell","Confirmed","LP"],
+  [null,"Douglas Sloan","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/douglassloan","Guessed","Impact Investor"],
+  [null,"Drew Morales","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/drew-morales","Guessed","LP"],
+  [null,"Dunstan Allison-Hope","Mini-FRAME NYC","https://linkedin.com/in/dunstanallisonhope/","Guessed","Policy/NGO"],
+  [null,"Eimear Palmer","Mini-FRAME NYC","https://linkedin.com/in/eimear-palmer-06866313a/","Guessed","LP"],
+  [null,"Elana Berkowitz","Mini-FRAME NYC","https://linkedin.com/in/elana-berkowitz-64b4bb49","Confirmed","VC"],
+  [null,"Erlinda arriola","Mini-FRAME NYC","https://linkedin.com/in/earriola1","Confirmed","VC"],
+  [null,"Giacomo","Mini-FRAME NYC","","N/A","Unknown"],
+  [null,"Hannah Leach","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/hannahleach","Confirmed","VC"],
+  [null,"Hans Vaule","Mini-FRAME NYC","https://linkedin.com/in/hansvaule/","Guessed","Consultant/Advisor"],
+  [null,"Ian Goldberg","Mini-FRAME NYC","https://linkedin.com/in/ian-s-goldberg","Confirmed","VC"],
+  [null,"Ian Samuels","Mini-FRAME NYC","https://linkedin.com/in/ian-samuels-552b26","Confirmed","VC"],
+  [null,"Inigo Garcia","Mini-FRAME NYC","","N/A","Consultant/Advisor"],
+  [null,"Izzy Schmidt","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/isabelle-c-schmidt/","Confirmed","Impact Investor"],
+  [null,"Joanne Gan","Mini-FRAME NYC","https://linkedin.com/in/joanne-gan-ab2a368","Confirmed","Impact Investor"],
+  [null,"Joe Medved","Mini-FRAME NYC","https://linkedin.com/in/joemedved/","Guessed","VC"],
+  [null,"Josianne Galea Baron","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/josianne-galea-baron/","Guessed","Policy/NGO"],
+  [null,"JP Schnapper-Casteras","Mini-FRAME NYC","https://linkedin.com/in/jp-schnapper-casteras-92bab41/","Guessed","Policy/NGO"],
+  [null,"Julia LeStrange Stern","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/justern/","Guessed","Impact Investor"],
+  [null,"Kaitlyn Huber","Mini-FRAME NYC","","N/A","VC"],
+  [null,"Katie Green","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/katie-green-cfa-9b177bb7/","Guessed","LP"],
+  [null,"Katie Wu","Mini-FRAME NYC","https://linkedin.com/in/katiewu9/","Guessed","VC"],
+  [null,"Keren raz","Mini-FRAME NYC","https://linkedin.com/in/keren-r-a730554/","Guessed","LP"],
+  ["https://cdn.lu.ma/avatars/ja/ce528031-56d3-4a0e-baca-962f9f19eee5","Kiran Arokiasamy","Mini-FRAME NYC","https://linkedin.com/in/kiran-arokiasamy","Confirmed","Consultant/Advisor"],
+  [null,"Kristi","Mini-FRAME NYC","","N/A","Unknown"],
+  [null,"Laura","Mini-FRAME NYC","https://linkedin.com/in/laura-maher","Confirmed","Unknown"],
+  ["https://images.lumacdn.com/avatars/pt/6644aad6-8e88-4a4f-9bf7-d80463338fca.jpg","Laura Weidman Powers","Mini-FRAME NYC","https://linkedin.com/in/laurawp","Confirmed","Impact Investor"],
+  [null,"Lauren Densham","Mini-FRAME NYC","https://linkedin.com/in/ldensham","Confirmed","Impact Investor"],
+  [null,"Lenore Champagne Beirne","Mini-FRAME NYC","https://linkedin.com/in/lenorechampagnebeirne","Confirmed","VC"],
+  [null,"Lily Han","Mini-FRAME NYC","https://linkedin.com/in/hanlily/","Guessed","Impact Investor"],
+  [null,"Lucid Capitalism","Mini-FRAME NYC","https://linkedin.com/in/shudaryao","Confirmed","Consultant/Advisor"],
+  [null,"Maggie Wong","Mini-FRAME NYC","https://linkedin.com/in/tmmaggiewong","Confirmed","VC"],
+  [null,"María Juliana Ruiz","Mini-FRAME NYC","","N/A","Impact Investor"],
+  [null,"Mari Brossard","Mini-FRAME NYC","https://linkedin.com/in/maribrossard/","Guessed","Impact Investor"],
+  ["https://images.lumacdn.com/avatars/7p/5cb8849e-4c61-42e3-8fad-06198d08ebdd.jpg","Mathilde Beniflah","Mini-FRAME NYC","https://linkedin.com/in/mathilde-beniflah-ba0037b4","Confirmed","VC"],
+  [null,"Matt Hawes","Mini-FRAME NYC","https://linkedin.com/in/matthewhawes-","Confirmed","VC"],
+  [null,"Megahan Peterson","Mini-FRAME NYC","https://linkedin.com/in/megahan-peterson-3b6b5012","Confirmed","Impact Investor"],
+  [null,"Mica","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/micalejohn","Confirmed","Unknown"],
+  [null,"Mika Morse","Mini-FRAME NYC","https://linkedin.com/in/mika-morse/","Guessed","Policy/NGO"],
+  [null,"Nandini S Hampole","Novata Dinner","https://linkedin.com/in/nandini-hampole/","Guessed","LP"],
+  [null,"Natàlia Costa i Coromina","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/natalia-costa-i-coromina/","Guessed","Impact Investor"],
+  [null,"Natasha Buckley","Mini-FRAME NYC","https://linkedin.com/in/natasha-buckley-88271831/","Guessed","LP"],
+  [null,"Nathan Eskender","Mini-FRAME NYC","https://linkedin.com/in/nathan-eskender","Confirmed","Impact Investor"],
+  [null,"Nathan Jones","Mini-FRAME NYC","https://linkedin.com/in/nathan-jones-67386366","Confirmed","Impact Investor"],
+  [null,"Nelson Switzer","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/nelson-a-switzer-88b944b","Confirmed","Impact Investor"],
+  [null,"Patrick Ho","Mini-FRAME NYC","https://linkedin.com/in/patrick-ho-4831a71b/","Guessed","Impact Investor"],
+  [null,"Paul Fehlinger","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/paulfehlinger","Guessed","Policy/NGO"],
+  [null,"Peter Dunbar","Mini-FRAME NYC","https://linkedin.com/in/peter-dunbar-992a8422","Guessed","LP"],
+  [null,"Peter Flynn","Mini-FRAME NYC","https://linkedin.com/in/peter-flynn-48398a1a0","Confirmed","VC"],
+  [null,"Radhika Shroff","Mini-FRAME NYC","https://linkedin.com/in/radhika-shroff-6b847339/","Guessed","Impact Investor"],
+  [null,"Rebecca Singer","Mini-FRAME NYC","https://linkedin.com/in/rebecca-singer","Confirmed","Impact Investor"],
+  [null,"Safiya Noble","Mini-FRAME NYC","https://linkedin.com/in/safiyanoble/","Guessed","Academic/Research"],
+  ["https://images.lumacdn.com/avatars/6u/8776c15b-9b26-4d4d-9183-2461f3553952","Sarah Sclarsic","Mini-FRAME NYC","https://linkedin.com/in/sarah-sclarsic","Confirmed","Impact Investor"],
+  [null,"Saurabh","Mini-FRAME NYC","","N/A","Unknown"],
+  ["https://cdn.lu.ma/avatars/dc/677097cc-968c-4cef-b4a5-868381552bd5","Shaun Chaudhuri","Mini-FRAME NYC;Novata Dinner","https://linkedin.com/in/shaunchaudhuri","Confirmed","Impact Investor"],
+  [null,"Sofia Marsaglia","Mini-FRAME NYC","https://linkedin.com/in/sofia-marsaglia-35290a109/","Guessed","Impact Investor"],
+  [null,"Stephanie Seale","Mini-FRAME NYC","","N/A","Unknown"],
+  ["https://images.lumacdn.com/avatars/yp/45cf82d9-ca73-401d-9c3f-61abc0b84b9d","Tyler Schinto","Mini-FRAME NYC","https://linkedin.com/in/tylerschinto","Confirmed","VC"],
+  [null,"Wendy Li","Mini-FRAME NYC","https://linkedin.com/in/wendy-li-cfa","Confirmed","Investor"],
+  [null,"Yi Jean Chow","Mini-FRAME NYC","https://linkedin.com/in/yi-jean-chow","Confirmed","Impact Investor"],
+  [null,"Yohan Hill","Mini-FRAME NYC","https://linkedin.com/in/yohanhill/","Guessed","LP"],
+  [null,"Yue (Nina) Chen","Mini-FRAME NYC","https://linkedin.com/in/ninaychen/","Guessed","Impact Investor"],
+  [null,"Zoe Weinberg","Mini-FRAME NYC","https://linkedin.com/in/z-weinberg","Confirmed","VC"],
+];
+
+const COLORS = ["#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#84cc16"];
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function avatarColor(name) { let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))%COLORS.length; return COLORS[h]; }
+
+function evtLabel(evts) {
+  const arr = evts.split(';');
+  if (arr.length > 1) return `<span class="ev ev-both">Both</span>`;
+  if (arr[0].includes('Novata')) return `<span class="ev ev-novata">Novata Dinner</span>`;
+  return `<span class="ev ev-mini">Mini-FRAME NYC</span>`;
+}
+function statusClass(s) { return s==='Confirmed'?'sp-confirmed':s==='Guessed'?'sp-guessed':'sp-na'; }
+function statusLabel(s) { return s==='N/A'?'Not found':s; }
+function typeClass(t) {
+  const m={'VC':'tp-vc','LP':'tp-lp','Impact Investor':'tp-impact','Investor':'tp-investor',
+    'Policy/NGO':'tp-policy','Academic/Research':'tp-academic','Consultant/Advisor':'tp-consultant','Unknown':'tp-unknown'};
+  return m[t]||'tp-unknown';
+}
+const liIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#0a66c2" style="flex-shrink:0"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`;
+
+let sortCol = -1, sortAsc = true;
+function sort(col) {
+  sortAsc = sortCol === col ? !sortAsc : true;
+  sortCol = col;
+  document.querySelectorAll('thead th').forEach((th,i) => {
+    th.classList.toggle('sorted', i === col);
+    const s = th.querySelector('.si');
+    if (s) s.textContent = i===col?(sortAsc?'↑':'↓'):'↕';
+  });
+  render();
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const ef = document.getElementById('evtF').value;
+  const tf = document.getElementById('typF').value;
+  const sf = document.getElementById('stF').value;
+
+  let rows = DATA.filter(r => {
+    const [,name,evts,,status,type] = r;
+    if (q && !name.toLowerCase().includes(q)) return false;
+    if (ef === 'both' && !evts.includes(';')) return false;
+    if (ef === 'Mini-FRAME' && (evts.includes(';') || !evts.includes('Mini-FRAME'))) return false;
+    if (ef === 'Novata' && (evts.includes(';') || !evts.includes('Novata'))) return false;
+    if (tf && type !== tf) return false;
+    if (sf && status !== sf) return false;
+    return true;
+  });
+
+  if (sortCol >= 0) {
+    rows = [...rows].sort((a,b) => {
+      const av=a[sortCol]||'', bv=b[sortCol]||'';
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
+
+  document.getElementById('tbody').innerHTML = rows.map(r => {
+    const [photo, name, evts, url, status, type] = r;
+    const avatarHtml = photo
+      ? `<img class="avatar" src="${photo}" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        + `<div class="avatar-initials" style="display:none;background:${avatarColor(name)}">${initials(name)}</div>`
+      : `<div class="avatar-initials" style="background:${avatarColor(name)}">${initials(name)}</div>`;
+    const liHtml = url
+      ? `<a class="li-link" href="${url.startsWith('http')?url:'https://'+url}" target="_blank" rel="noopener">${liIcon}&nbsp;${url.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//,'').replace(/\/$/,'')}</a>`
+      : `<span class="no-link">—</span>`;
+    return `<tr>
+      <td class="avatar-cell"><div style="display:flex">${avatarHtml}</div></td>
+      <td class="name">${name}</td>
+      <td>${evtLabel(evts)}</td>
+      <td>${liHtml}</td>
+      <td><span class="sp ${statusClass(status)}">${statusLabel(status)}</span></td>
+      <td><span class="tp ${typeClass(type)}">${type}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cnt').textContent = `${rows.length} of ${DATA.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
