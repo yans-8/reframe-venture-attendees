@@ -353,7 +353,14 @@ function render() {
     btn.title = urls.length ? `Open ${urls.length} LinkedIn profiles` : 'No LinkedIn URLs in this batch';
     btn.disabled = urls.length === 0;
     btn.onclick = () => {
-      urls.forEach(u => window.open(u.startsWith('http') ? u : 'https://' + u, '_blank'));
+      urls.forEach((u, i) => {
+        const a = document.createElement('a');
+        a.href = u.startsWith('http') ? u : 'https://' + u;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        setTimeout(() => { a.click(); document.body.removeChild(a); }, i * 100);
+      });
     };
     bar.appendChild(btn);
   }
